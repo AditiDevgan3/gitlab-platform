@@ -1,0 +1,15 @@
+{{- if or .Values.global.rbac.create .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ template "backbase-app.fullname" . }}
+  labels:
+{{ include "backbase-app.labels" . | indent 4 }}
+rules:
+{{- if .Values.global.rbac.role.rules }}
+{{ toYaml .Values.global.rbac.role.rules | indent 2 }}
+{{- end -}}
+{{- if .Values.rbac.role.rules }}
+{{ toYaml .Values.rbac.role.rules | indent 2 }}
+{{- end -}}
+{{- end -}}

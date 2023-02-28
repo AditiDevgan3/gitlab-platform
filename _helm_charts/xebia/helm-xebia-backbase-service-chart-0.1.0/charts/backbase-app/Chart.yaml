@@ -1,0 +1,14 @@
+apiVersion: v1
+description: |
+  A Common Helm Chart that represents typical Backbase Java Application based on Spring Boot.
+  This chart should be used in other [umbrella](https://helm.sh/docs/charts_tips_and_tricks/#complex-charts-with-many-dependencies) charts as a [dependency](https://helm.sh/docs/developing_charts/#chart-dependencies) with [alias](https://helm.sh/docs/developing_charts/#alias-field-in-requirements-yaml).
+  This chart is highly dependent on Helm [global values](https://helm.sh/docs/developing_charts/#global-values) functionality.
+icon: https://start.backbase.com/favicon.png
+keywords:
+- backbase
+- java
+maintainers:
+- email: baas@backbase.com
+  name: BaaS Team
+name: backbase-app
+version: 0.24.2

@@ -1,0 +1,57 @@
+{{- if .Values.ingress.enabled -}}
+{{- $baseDomain := .Values.global.ingress.baseDomain -}}
+{{- $gIngressAnnotations := mergeOverwrite (dict) .Values.global.ingress.annotations -}}
+{{- $lIngressAnnotations := mergeOverwrite (dict) .Values.ingress.annotations -}}
+{{- $ingressAnnotations := mergeOverwrite (dict) $gIngressAnnotations $lIngressAnnotations -}}
+{{- if .Capabilities.APIVersions.Has "networking.k8s.io/v1" }}
+apiVersion: networking.k8s.io/v1
+{{- else if .Capabilities.APIVersions.Has "networking.k8s.io/v1beta1" }}
+apiVersion: networking.k8s.io/v1beta1
+{{ else }}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ include "backbase-app.fullname" . }}
+  labels:
+{{ include "backbase-app.labels" . | indent 4 }}
+  {{- with $ingressAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+{{- if .Values.ingress.tls }}
+  tls:
+{{- toYaml .Values.ingress.tls | nindent 4 -}}
+{{- end }}
+  rules:
+  {{ range .Values.ingress.hosts }}
+    - host: {{ printf "%s.%s" ( required "Ingress: host field required" .host ) $baseDomain | trimSuffix "." }}
+      http:
+        paths:
+        {{- if .customPaths }}
+        {{- toYaml .customPaths | nindent 10 }}
+        {{- end }}
+        {{- range .paths }}
+          - backend:
+            {{- if $.Capabilities.APIVersions.Has "networking.k8s.io/v1" }}
+            {{- $service := mergeOverwrite (dict) (mergeOverwrite (dict) $.Values.global.service) (mergeOverwrite (dict) $.Values.service) }}
+              service:
+                name: {{ include "backbase-app.service-name" $ }}
+                port:
+                  {{- if $service.port }}
+                  number: {{ $service.port }}
+                  {{ else }}
+                  name: http
+                  {{- end }}
+            {{- else }}
+              serviceName: {{ include "backbase-app.service-name" $ }}
+              servicePort: http
+            {{- end }}
+            path: {{ . }}
+            {{- if $.Capabilities.APIVersions.Has "networking.k8s.io/v1" }}
+            pathType: ImplementationSpecific
+            {{- end }}
+  {{- end }}
+{{- end }}
+{{ end }}

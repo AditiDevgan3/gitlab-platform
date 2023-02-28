@@ -1,0 +1,5 @@
+/pom.xml
+/target/
+/generate-docs.sh
+/README.md.gotmpl
+/README-backbaseapp.md.gotmpl

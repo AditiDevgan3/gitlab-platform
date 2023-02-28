@@ -1,0 +1,12 @@
+apiVersion: v1
+appVersion: 1.9.5-beta
+description: A Helm Chart for Backbase Web Authentication
+icon: https://start.backbase.com/favicon.png
+keywords:
+- identity
+- web-authentication
+maintainers:
+- email: identity-web@backbase.com
+  name: Identity Web Squad
+name: web-authentication
+version: 0.3.1

@@ -1,0 +1,49 @@
+stages:
+  - push-to-gcr
+
+kaniko-build-push:
+  stage: push-to-gcr
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  variables:
+    KANIKO_BUILD_CONTEXT: $CI_PROJECT_DIR/infra_pipeline_tool-master/infra-docker-image
+    IMAGE_NAME: "infra-pipeline-tool"
+    PROJECT_ID: "abbank-poc"
+  tags:
+    - dev
+  script:
+    - export VERSION=v3
+    - DOCKERFILE_PATH=${DOCKERFILE_PATH:-"$KANIKO_BUILD_CONTEXT/Dockerfile"}
+    - export GOOGLE_APPLICATION_CREDENTIALS=/kaniko/kaniko-secret.json
+    - echo $GCLOUD_AUTH | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
+    - /kaniko/executor --context $KANIKO_BUILD_CONTEXT --dockerfile $DOCKERFILE_PATH --destination asia.gcr.io/$PROJECT_ID/${IMAGE_NAME}:$VERSION
+    - export IMAGE_PATH="asia.gcr.io/$PROJECT_ID/${IMAGE_NAME}:$VERSION"
+#   #   - echo "export DOCKER_IMAGE=$IMAGE_PATH">build.sh
+#   # artifacts:
+#   #   paths:
+#   #     - "build.sh"
+  only:
+      - main
+
+# variables:
+#   CS_ANALYZER_IMAGE: registry.gitlab.com/security-products/container-scanning:5
+
+# container_scanning:
+#   image: "$CS_ANALYZER_IMAGE$CS_IMAGE_SUFFIX"
+#   stage: test
+#   variables:
+#     GIT_STRATEGY: none
+#   allow_failure: true
+#   artifacts:
+#     reports:
+#       container_scanning: gl-container-scanning-report.json
+#       dependency_scanning: gl-dependency-scanning-report.json
+#     paths: [gl-container-scanning-report.json, gl-dependency-scanning-report.json]
+#   tags:
+#     - "dev"
+#   dependencies:
+#     - "kaniko-build-push"
+#   script:
+#     - source build.sh
+#     - gtcs scan

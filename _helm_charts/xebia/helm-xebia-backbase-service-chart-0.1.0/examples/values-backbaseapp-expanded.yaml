@@ -1,0 +1,776 @@
+# This file contains all the values inherited from the 'backbase-app' parent chart,
+# with this chart's values applied as overrides plus any additional values
+# this chart defines.
+#
+
+global:
+  # -- Configures the web-authentication chart name
+  chartName: "web-authentication"
+  # -- Number of replicas for Deployment.
+  replicaCount: 1
+  # -- Kubernetes [Deployment Strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy).
+  # If `strategy` is not set and `replicaCount=1`, then default to a `RollingUpdate` strategy with `maxUnavailable: 0`.
+  strategy: {}
+  # # The default strategy if replicaCount=1
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxUnavailable: 0
+
+  # Configures the service
+  app:
+    # -- Configures additional `app.backbase.com/key: value` labels for deployments
+    metadata: {
+      # -- The general product the service is a member of
+      tier: identity,
+      # -- Access level of the application
+      public: true}
+    # tier: dbs
+    # capability: access-control
+
+    # -- Configures which docker image to use
+    image:
+      # -- The docker repository for this application
+      registry: ""
+      # -- The docker repository tag for this deployment
+      repository: "web-authentication"
+      # -- The docker image tag for this application
+      tag: ""
+      # -- [Pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) for docker image
+      pullPolicy: IfNotPresent
+  # -- Kubernetes [PriorityClass name](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority)
+  priorityClassName: ""
+  # -- Kubernetes [Image Pull Secrets](https://kubernetes.io/docs/concepts/containers/images/#referring-to-an-imagepullsecrets-on-a-pod)
+  imagePullSecrets: []
+  # -- Kuberenetes [Affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity)
+  affinity: {}
+  #  podAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: security
+  #          operator: In
+  #          values:
+  #          - S1
+  #      topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  # -- If true, applies a default anti-affinity policy.
+  # We use `preferredDuringScheduling` aka soft affinity type to make sure that pods will be spread between the different nodes.
+  defaultAffinity: true
+  # # If defaultAffinity=true, this anti-affinity policy is applied
+  # affinity:
+  #   podAntiAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #     - weight: 100
+  #       podAffinityTerm:
+  #         labelSelector:
+  #           matchLabels:
+  #             {{- include "backbase-app.match-labels" . | nindent 8 }}
+  #         topologyKey: kubernetes.io/hostname
+
+  # -- Kubernetes [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets)
+  podDisruptionBudget: {}
+  # -- Key-value pairs representing [environment variables for application container](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  # It is possible to use templates as value here (will be evaluated using tpl function).
+  env: {}
+  # BACKBASE_HOME: "/opt/backbase"
+  # RELEASE_NAME: '{{ .Release.Name }}'
+  # POD_IP:
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: status.podIP
+
+  # -- Key-value pairs of additional Pod [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+  # It is possible to use templates here (will be evaluated using tpl function)
+  podExtraLabels: {}
+  # -- Key-value pairs of additional Pod [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
+  # It is possible to use templates here (will be evaluated using tpl function)
+  podExtraAnnotations: {}
+  # -- Kubernetes [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+  podSecurityContext: {}
+  # Lists of strings to construct a `JAVA_OPTS` environment variable
+  javaOpts:
+    # -- The environment variable that will be used to expose the java opts.
+    envVarName: JAVA_TOOL_OPTIONS
+    # -- Default options; used to construct JAVA_OPTS environment variable.
+    # Avoid altering, use extra list to add customization.
+    # Max ram percentage is supported for the latest JDK's and JRE's.
+    base:
+      # -- See https://docs.oracle.com/javase/8/docs/technotes/tools/unix/java.html.
+      # Sets the maximum amount of memory that the JVM may use for the Java heap before applying ergonomics heuristics as a percentage of the
+      # maximum amount determined as described in the -XX:MaxRAM option. The default value (if not specified) is 25 percent.
+      - "-XX:MaxRAMPercentage=60.0"
+      # -- See https://docs.oracle.com/javase/8/docs/technotes/tools/unix/java.html
+      # The VM provides automatic container detection support, which enables the VM to determine the amount of memory and number of processors
+      # that are available to a Java process running in docker containers. It uses this information to allocate system resources.
+      - "-XX:+UseContainerSupport"
+    # -- Extra options appended to the Java Options environment variable.
+    # This list will be appended to `javaOpts.base`.
+    extra:
+      # Root logger level
+      - "-Dlogging.level.root=WARN"
+      # Log level for Backbase-provided classes
+      - "-Dlogging.level.com.backbase=WARN"
+  # JWT variables for application pod
+  jwt:
+    # -- If enabled, sets JWT-related environment variables
+    enabled: true
+    # -- name of external kubernetes secret containing the jwt values
+    existingSecret: "backbase-env-jwt"
+    # -- If `SIG_SECRET_KEY_fromSecret` is false, this value will be used as the `SIG_SECRET_KEY` environment variable.
+    SIG_SECRET_KEY_value: ""
+    # -- will set the variable SIG_SECRET_KEY with the value from the secret jwt-internal-secretkey secret key
+    SIG_SECRET_KEY_fromSecret: true
+    # -- If `EXTERNAL_SIG_SECRET_KEY_fromSecret` is false, this value will be used as the `EXTERNAL_SIG_SECRET_KEY` environment variable.
+    EXTERNAL_SIG_SECRET_KEY_value: ""
+    # -- If true, `jwt-external-secretkey` data field from `existingSecret` will be used as the `EXTERNAL_SIG_SECRET_KEY` environment variable value.
+    EXTERNAL_SIG_SECRET_KEY_fromSecret: false
+    # -- If `EXTERNAL_ENC_SECRET_KEY_fromSecret` is false, this value will be used as the `EXTERNAL_ENC_SECRET_KEY` environment variable.
+    EXTERNAL_ENC_SECRET_KEY_value: ""
+    # -- if true, `jwt-external-enc-secretkey` data field from `existingSecret` will be used as the `EXTERNAL_ENC_SECRET_KEY` environment variable value
+    EXTERNAL_ENC_SECRET_KEY_fromSecret: false
+    # -- If `USERCTX_KEY_fromSecret` equals false, this value will be used as the `USERCTX_KEY_value` environment variable.
+    USERCTX_KEY_value: ""
+    # -- will set the variable USERCTX_KEY with the value from the userctx-key secret key
+    USERCTX_KEY_fromSecret: true
+  # Netflix Eureka service discovery registry configuration
+  registry:
+    # -- If enabled - `registry.envVarNameDefaultZone` environment variable will be set for Pod based on protocol/host/port/path values:
+    # `protocol://host:port/path`
+    enabled: false
+    # -- Will set [eureka.instance.preferIpAddress](https://cloud.spring.io/spring-cloud-netflix/multi/multi_spring-cloud-eureka-server.html#spring-cloud-eureka-server-prefer-ip-address) environment variable to true
+    preferIpAddress: true
+    # -- This name will be used in the environment variable to publish the prefer ip address.
+    envVarNamePreferIpAddress: EUREKA_INSTANCE_PREFERIPADDRESS
+    # -- This name will be used to publish the environment variable for the default zone.
+    envVarNameDefaultZone: eureka.client.serviceUrl.defaultZone
+    # -- protocol - http or https
+    protocol: http
+    # -- registry host
+    host: registry
+    # -- registry port
+    port: 8080
+    # -- registry base path
+    path: /eureka/
+    # -- if enabled - an `initContainer` with registry check will be added to Pod
+    checkEnabled: false
+    # -- Type of check - curl / netcat / nslookup
+    checkType: curl
+    # -- Container Image to use for the check type as specified by checkType
+    checkInitContainerImage: byrnedo/alpine-curl
+    # -- initContainer memory allocation set for limit and requests
+    checkInitContainerMemory: 200Mi
+    # -- initContainer CPU allocation set for limit and requests
+    checkInitContainerCpu: 100m
+  # JMS/ActiveMQ stuff
+  activemq:
+    # -- If enabled - will set corresponding JMS/ActiveMQ environment variables:
+    # `SPRING_ACTIVEMQ_BROKER_URL, SPRING_ACTIVEMQ_USER, SPRING_ACTIVEMQ_PASSWORD`
+    enabled: false
+    # -- ActiveMQ username
+    username: "admin"
+    # -- ActiveMQ password.  Will be used if `existingSecret` not specified
+    password: "CHANGEME"
+    # -- Name of external kubernetes secret with activemq values
+    existingSecret: ""
+    # -- data key in existing kubernetes secret to reference as `SPRING_ACTIVEMQ_PASSWORD` value
+    existingSecretKey: "ACTIVEMQ_PASSWORD"
+    # -- ActiveMQ host
+    host: activemq
+    # -- Custom URL template.  Template must reference values in `.activemq` scope: `tcp://{{.activemq.host}}:{{.activemq.port}}`
+    urlTemplate: ""
+    # -- ActiveMQ JMS port
+    port: 61616
+    # -- if enabled - an `initContainer` with activemq check will be added to Pod
+    checkEnabled: false
+    # -- Type of check - `curl` / `netcat` / `nslookup`
+    checkType: netcat
+    # -- Container Image to use for the check type as specified by checkType
+    checkInitContainerImage: busybox
+    # -- initContainer memory allocation set for limit and requests
+    checkInitContainerMemory: 100Mi
+    # -- initContainer CPU allocation set for limit and requests
+    checkInitContainerCpu: 100m
+  # Use this to map default JMS/ActiveMQ environment variable names to custom ones
+  # For example this will set `MY_BROKER_URL` instead of `SPRING_ACTIVEMQ_BROKER_URL`:
+  #   activemqEnvVarsMap:
+  #    URL: "MY_BROKER_URL"
+  activemqEnvVarsMap:
+    # -- Active MQ Broker URL environment variable name
+    URL: "SPRING_ACTIVEMQ_BROKER_URL"
+    # -- Active MQ Broker username environment variable name
+    USERNAME: "SPRING_ACTIVEMQ_USER"
+    # -- Active MQ Broker password environment variable name
+    PASSWORD: "SPRING_ACTIVEMQ_PASSWORD"
+  # Database configuration
+  database:
+    # -- If enabled - will set corresponding database environment variables:
+    # `SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD, SPRING_DATASOURCE_DRIVER_CLASS_NAME
+    enabled: true
+    # -- Database username
+    username: backbase
+    # -- Database password.  Will be used if `existingSecret` not specified
+    password: "CHANGEME"
+    # -- Data key in existing kubernetes secret to reference as `SPRING_DATASOURCE_PASSWORD` value
+    existingSecret: "backbase-env-mysql"
+    # -- Data key in existing kubernetes secret to reference as `SPRING_DATASOURCE_PASSWORD` value
+    existingSecretKey: "mysql-password"
+    # -- Database type.  Supported values: mysql / oracle / mssql
+    type: mysql
+    # -- Database host
+    host: mysql
+    # -- Database port
+    port: 3306
+    # -- Database name/SID
+    sid: ""
+    # -- JDBC URL database parameters
+    parameters:
+      # -- MySQL JDBC URL database parameters to be appended to the end of the URL.  Should begin with a parameter separator.
+      mysql: ""
+      # -- MariaDB JDBC URL database parameters to be appended to the end of the URL.  Should begin with a parameter separator.
+      mariadb: ""
+      # -- Oracle JDBC URL database parameters to be appended to the end of the URL.  Should begin with a parameter separator.
+      oracle: ""
+      # -- MSSQL JDBC URL database parameters to be appended to the end of the URL.  Should begin with a parameter separator.
+      mssql: ""
+    # -- Custom Database URL template.
+    # Template must reference values in .database scope: `db://{{.database.host}}:{{.database.port}}/{{.database.sid}}{{.database.parameters.mysql}}?useSSL=true`
+    urlTemplate: ""
+    # -- if enabled - initContainer with database check will be added to Pod
+    checkEnabled: true
+    # -- Type of check - `curl` / `netcat` / `nslookup`
+    checkType: netcat
+    # -- Container Image to use for the check type as specified by `checkType`
+    checkInitContainerImage: busybox
+    # -- initContainer memory allocation set for limit and requests
+    checkInitContainerMemory: 100Mi
+    # -- initContainer CPU allocation set for limit and requests
+    checkInitContainerCpu: 100m
+  # Use this to map default JMS/ActiveMQ environment variable names to custom ones.
+  # For example this will set `DB_URL` instead of `SPRING_DATASOURCE_URL`:
+  # databaseEnvVarsMap:
+  #  URL: "DB_URL"
+  databaseEnvVarsMap:
+    # -- Spring DataSource URL environment variable name
+    URL: "SPRING_DATASOURCE_URL"
+    # -- Spring DataSource username environment variable name
+    USERNAME: "SPRING_DATASOURCE_USERNAME"
+    # -- Spring DataSource password environment variable name
+    PASSWORD: "SPRING_DATASOURCE_PASSWORD"
+    # -- Spring DataSource driver class environment variable name
+    DRIVER_CLASS_NAME: "SPRING_DATASOURCE_DRIVER_CLASS_NAME"
+  # JMX support
+  jmx:
+    # -- if enabled - will set corresponding properties in `JAVA_OPTS`
+    enabled: false
+    # -- jmx port
+    port: 1098
+    # -- List of JMX properties to add to `JAVA_OPTS`
+    javaOpts:
+      # Enabled JMX agent
+      - "-Dcom.sun.management.jmxremote"
+      # Disables JMX authentication
+      - "-Dcom.sun.management.jmxremote.authenticate=false"
+      # Disables JMX SSL transport
+      - "-Dcom.sun.management.jmxremote.ssl=false"
+      # Disables JMX local-only connection limitation
+      - "-Dcom.sun.management.jmxremote.local.only=false"
+      # Sets JMX port
+      - "-Dcom.sun.management.jmxremote.port={{.Values.global.jmx.port}}"
+      # Sets JMX RMI port
+      - "-Dcom.sun.management.jmxremote.rmi.port={{.Values.global.jmx.port}}"
+      # The host name string that should be associated with remote stubs for locally created remote objects,
+      # in order to allow clients to invoke methods on the remote object.
+      - "-Djava.rmi.server.hostname=127.0.0.1"
+  # Token converter OIDC client credentials override:
+  # Override default credentials from value,
+  # or from an external Kubernetes secret
+  bbclient:
+    # -- If enabled - will set corresponding oidc client environment variables
+    enabled: false
+    # -- Name of external Kubernetes secret.
+    # Should contain the following data fields: `bb-client-id, bb-client-secret`
+    existingSecret: ""
+    # -- If clientIdFromSecret is true - `bb-client-id` data field from existingSecret will be used for the env variable `backbase.communication.http.client-id`
+    clientIdFromSecret: false
+    # -- If clientIdFromSecret is false - this clientIdValue will be used for the env variable `backbase.communication.http.client-id`
+    clientIdValue: "bb-client" # default to match internal default
+    # -- If clientSecretFromSecret is true - `bb-client-secret` data field from existingSecret will be used for the env variable `backbase.communication.http.client-secret`
+    clientSecretFromSecret: false
+    # -- If clientSecretFromSecret is false - this clientSecretValue will be used for the env variable `backbase.communication.http.client-secret`
+    clientSecretValue: "bb-secret" # default to match internal default
+  # -- Use this to map default bbclient environment variable names to alternatives.
+  # For example, this will set var name `keycloak.backbase.oidc-token-converter.client-id` instead of `backbase.communication.http.client-id`:
+  #   bbclientEnvVarsMap:
+  #     CLIENTID: "keycloak.backbase.oidc-token-converter.client-id"
+  bbclientEnvVarsMap:
+    # -- Client ID environment variable name
+    CLIENTID: "backbase.communication.http.client-id"
+    # -- Client secret environment variable name
+    CLIENTSECRET: "backbase.communication.http.client-secret"
+  # Debug support
+  debug:
+    # -- if enabled - will set corresponding properties in `JAVA_OPTS`
+    enabled: false
+    # -- debug port
+    port: 5005
+    # -- binding address, could be `*` or `0.0.0.0`
+    address: '*'
+    # -- List of debug properties to add to `JAVA_OPTS`
+    javaOpts:
+      # Config dyanmic based on `global.debug` and `debug` values
+      - "-agentlib:jdwp=transport=dt_socket,server=y,suspend={{.Values.debug.suspend}},address={{.Values.global.debug.address}}:{{.Values.global.debug.port}}"
+  # -- Kubernetes [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector)
+  nodeSelector: {}
+  # Persistent Storage using PVC
+  persistence:
+    # -- Global Storage Class
+    storageClass: ""
+  # Kubernetes Service
+  service:
+    # -- if enabled, will create a Kubernetes Service resource for this deployment
+    enabled: true
+    # -- name of the Kubernetes Service.  If not specified, this chart will generate a name by convention
+    nameOverride: ""
+    # -- how the [Service is published](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+    type: ClusterIP
+    # -- which port to listen to
+    port: 8080
+    # -- name of the listening port
+    portName: http
+    # -- target port of the downstream backends servicing the actual request
+    targetPort: http
+    # -- additional ports to expose on this Service
+    additionalPorts: []
+  #      - name: myPort
+  #        port: myPortNumber
+  #        targetPort: myTargetPortName
+
+  # -- Kubernetes Ingress
+  ingress:
+    # -- If set FQDN will be constructed like host.baseDomain
+    baseDomain: ""
+    # -- Global annotations
+    annotations: {}
+  # -- Global Kubernetes [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
+  # Will not be merged with local counterparts
+  initContainers: []
+  #  - name: init-myservice
+  #    image: busybox:1.28
+  #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+
+  # -- Global volumes
+  # Will not be merged with local counterparts
+  volumes: []
+  # -- Global volumeMounts
+  # Will not be merged with local counterparts
+  volumeMounts: []
+  # -- Adding entries to a Pod's /etc/hosts file provides Pod-level override of hostname resolution when DNS and other options are not applicable.
+  hostAliases: []
+  # Kubernetes Startup Probe
+  startupProbe:
+    # -- if true, enables the Kubernetes [startup probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes)
+    # for the main container.
+    enabled: false
+    # -- The HTTP path exposed by the container that the probe should request
+    path: /actuator/health/liveness
+    # -- The port exposed by the container that the probe should connect to
+    port: http
+    # -- The URL scheme exposed by the container that the probe should request
+    scheme: HTTP
+    # -- Number of seconds after the container has started before probes are initiated. Minimum value is 0.
+    initialDelaySeconds: 30
+    # -- When a probe fails, Kubernetes will try `failureThreshold` times before giving up.
+    # Giving up in case of startup probe means killing the container. Minimum value is 1
+    failureThreshold: 40
+    # -- How often (in seconds) to perform the probe. Minimum value is 1.
+    periodSeconds: 15
+    # -- Number of seconds after which the probe times out. Minimum value is 1.
+    timeoutSeconds: 5
+  # Kubernetes Liveness Probe
+  livenessProbe:
+    # -- if true, enables the Kubernetes [liveness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+    # for the main container.
+    enabled: false
+    # -- The HTTP path exposed by the container that the probe should request
+    path: /actuator/health/liveness
+    # -- The port exposed by the container that the probe should connect to
+    port: http
+    # -- The URL scheme exposed by the container that the probe should request
+    scheme: HTTP
+    # -- Number of seconds after the container has started before probes are initiated. Minimum value is 0.
+    initialDelaySeconds: 90
+    # -- When a probe fails, Kubernetes will try `failureThreshold` times before giving up.
+    # Giving up in case of liveness probe means restarting the container.  Minimum value is 1
+    failureThreshold: 3
+    # -- How often (in seconds) to perform the probe. Minimum value is 1.
+    periodSeconds: 15
+    # -- Number of seconds after which the probe times out. Minimum value is 1.
+    timeoutSeconds: 5
+  # Kubernetes Readiness Probe
+  readinessProbe:
+    # -- if true, enables the Kubernetes [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+    # for the main container.
+    enabled: false
+    # -- The HTTP path exposed by the container that the probe should request
+    path: /actuator/health/readiness
+    # -- The port exposed by the container that the probe should connect to
+    port: http
+    # -- The URL scheme exposed by the container that the probe should request
+    scheme: HTTP
+    # -- Number of seconds after the container has started before probes are initiated. Minimum value is 0.
+    initialDelaySeconds: 90
+    # -- When a probe fails, Kubernetes will try `failureThreshold` times before giving up.
+    # Giving up in case of readiness probe will be marked the Pod as Unready.  Minimum value is 1
+    failureThreshold: 3
+    # -- How often (in seconds) to perform the probe. Minimum value is 1.
+    periodSeconds: 15
+    # -- Number of seconds after which the probe times out. Minimum value is 1.
+    timeoutSeconds: 5
+  # Service Account creation
+  serviceAccount:
+    # -- Specifies whether a Kubernetes `ServiceAccount` should be created
+    create: false
+    # -- The name of the `ServiceAccount` to use.
+    # If not set and `create` is true, a name is generated using the fullname template.
+    # If not set and `create` is false (but `rbac.create` is enabled) `default` will be used.
+    name: ""
+    # -- The annotations to use for the service account.
+    annotations: {}
+  # Role Based Access Control
+  rbac:
+    # -- (bool) Specifies whether RBAC resources should be created
+    create: true
+    # Kubernetes Role specification
+    role:
+      # -- Rules to create. It follows the Kubernetes [Role specification](https://v1-18.docs.kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole)
+      rules:
+        # See https://v1-18.docs.kubernetes.io/docs/concepts/overview/kubernetes-api/#api-groups
+        - apiGroups:
+            # "" indicates the core API group
+            - ""
+          # The Kubernetes resource types to perform the action on
+          resources:
+            - "configmaps"
+            - "pods"
+            - "services"
+            - "endpoints"
+          # The actions to allow on the defined Resources
+          verbs:
+            - "get"
+            - "list"
+            - "watch"
+  # Configuration of the Liquibase database schema migration tooling
+  liquibase:
+    # -- If true, configures an InitContainer to apply the Liquibase database change set on startup
+    enabled: false
+    # -- The location of the Liquibase change log file
+    changelogLocation: "classpath:db/changelog/db.changelog-persistence.xml"
+    # -- The SSDK main class to run to apply the Liquibase change log
+    initMainClass: "'com.backbase.buildingblocks.auxiliaryconfig.InitContainerApplication'"
+    # -- The DB username to be used by Liquibase when applying the change set
+    username: ""
+    # -- The DB password to be used by Liquibase when applying the change set
+    password: ""
+    # -- List of init arguments that will be passed after `command`` section, each argument must be in ""
+    initArgsOverride: []
+    # -- Key-value pairs representing environment variables for the Liquibase initContainer.  These will override values for env vars
+    #  specified on the main deployment (i.e. `global.env` or `env`).  See `global.env` for examples on how to set these.
+    env:
+      SPRING_LIQUIBASE_ENABLED: "true"
+  # Configuration related to application lifecycle
+  lifecycle:
+    # -- Timeout before sending sigterm to pod, needed to remove k8s endpoints
+    prestopTimeout: 10
+    # -- Duration in seconds the pod needs to terminate gracefully
+    terminationGracePeriodSeconds: 60
+    # -- Specify the maximum time allotted for the shutdown of any phase (group of SmartLifecycle beans with the
+    # same `phase` value). Value set on `spring.lifecycle.timeout-per-shutdown-phase` environment variable
+    timeoutPerShutdownPhase: "50s"
+    ##################################################################################################
+    ##
+    ## Local values
+    ##
+    ## Where these values are also defined in `global` scope above, these local values are `mergeOverwrite`
+    ## with their `global` counterparts.
+    ##
+    ##################################################################################################
+webauthentication:
+  # -- Number of replicas for Deployment.
+  replicaCount: 1
+  # -- Kubernetes [Deployment Strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy).
+  # If `strategy` is not set and `replicaCount=1`, then default to a `RollingUpdate` strategy with `maxUnavailable: 0`.
+  strategy: {}
+  # # The default strategy if replicaCount=1
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxUnavailable: 0
+
+  # Configures metadata and images of the app to be deployed.
+  app:
+    # -- Name of the application
+    name: webauthentication
+    # -- Metadata labels to apply to the Pod definition.  Keys prefixed with `app.backbase.com/`
+    metadata: {}
+    # -- Docker image reference for application container; of form `registry/repository:tag`
+    image:
+      # -- Reference to key name in `.global` scope (`.Values.global.keyname`).
+      # Key value will be used as Docker image tag.
+      # Must be string, no nesting.
+      # When specified - `image.tag` value will be ignored.
+      tagFrom: ""
+    # -- Kubernetes port definitions to apply to the Pod's main container
+    ports:
+      # Friendly name of the port
+      - name: http
+        # Port number to expose in the cluster
+        port: 8080
+    # -- Configures the kubernetes resource requests and limits for the deployment
+    resources:
+      # -- Container memory resources
+      memory:
+        # -- (int) Amount of container memory resource to request (in Mi unit)
+        # this results in a Kubernetes memory resource request on the Pod defintion
+        ram: 768
+        # -- (int) Extra memory reserved for container use (in Mi unit).
+        containerReserve: 0
+      # Container CPU resources
+      cpu:
+        # -- (int) Amount of shares of a CPU unit to request (where 1000=1 CPU).
+        minShares: 100
+        # -- (int) Amount of shares of a CPU unit to limit to (where 1000=1 CPU).
+        maxShares: 1000
+  # -- Additional containers.
+  # This is useful when working with proxies and sidecars.
+  # Container definition will printed as Yaml and passed trough the tpl function.
+  additionalContainers: []
+  # additionalContainers:
+  #   - name: proxy
+  #     image: proxy:1.0.0
+  #     imagePullPolicy: IfNotPresent
+  #     securityContext:
+  #       fsGroup: 2001
+  #       runAsGroup: 3001
+  #       runAsUser: 1001
+  #     env:
+  #       - name: TPL_VAR
+  #         value: "{{ .Release.Name }}"
+  #       - name: VAR
+  #         valueFrom:
+  #           secretRef:
+  #             name: secret
+  #             key: value
+  #     ports:
+  #       - name: proxy
+  #         containerPort: 9090
+  #         protocol: TCP
+
+  # -- Key-value pairs representing [environment variables for application container](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/).
+  # It is possible to use templates as value here (will be evaluated using tpl function)
+  env: {}
+  # BACKBASE_HOME: "/opt/backbase"
+  # RELEASE_NAME: '{{ .Release.Name }}'
+  # Pod_IP:
+  #   valueFrom:
+  #     fieldRef:
+  #       fieldPath: status.podIP
+
+  # -- Key-value pairs of additional Pod [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+  # It is possible to use templates here (will be evaluated using tpl function).
+  #
+  podExtraLabels: {}
+  # -- Key-value pairs of additional Pod [annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/).
+  # It is possible to use templates here (will be evaluated using tpl function).
+  #
+  podExtraAnnotations: {}
+  # -- Kubernetes [Pod Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+  podSecurityContext: {}
+  # -- Kubernetes [PriorityClass name](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority)
+  priorityClassName: ""
+  # See `global.javaOpts` for more details of the available options
+  javaOpts:
+    # -- Extra options appended to the Java Options environment variable.
+    # This list will be appended to `javaOpts.base`.
+    extra: []
+  # -- JWT related environment variables for Pod.  Overrides the values defined in `globals.jwt`.
+  # See `global.jwt` for more details of the available options
+  jwt: {}
+  # -- Netflix Eureka service discovery registry configuration.  See `global.registry` for more details of the available options
+  registry: {}
+  # Activemq :JMS/ActiveMQ Settings
+  activemq: {
+    # -- If enabled - will set corresponding JMS/ActiveMQ environment variables:
+    # `SPRING_ACTIVEMQ_BROKER_URL, SPRING_ACTIVEMQ_USER, SPRING_ACTIVEMQ_PASSWORD`
+    enabled: false}
+  # -- JMS / ActiveMQ env var map related configuration.  See `global.activemqEnvVarsMap` for more details of the available options
+  activemqEnvVarsMap: {}
+  # Database
+  database: {
+    # -- database name/SID
+    sid: web_authentication}
+  # -- Database env var map related configuration.  See `global.databaseEnvVarsMap` for more details of the available options
+  databaseEnvVarsMap: {}
+  # -- JMX related configuration.  See `global.jmx` for more details of the available options
+  jmx: {}
+  # -- Token converter OIDC client credential configuration. See `global.bbclient` for more details of the available options
+  bbclient: {}
+  # -- Token converter OIDC env var map related configuration.  See `global.bbclientEnvVarsMap` for more details of the available options
+  bbclientEnvVarsMap: {}
+  # See `global.debug` for more details of the available options
+  debug:
+    # -- Suspend process on startup (`y` or `n`)
+    suspend: 'n'
+  # -- Kubernetes [Startup Probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes)
+  startupProbe: {}
+  # -- Kubernetes [Liveness Probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  livenessProbe: {}
+  # -- Kubernetes [Readiness Probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
+  readinessProbe: {}
+  # Kubernetes service
+  service: {
+    # -- name of the Kubernetes Service.  If not specified, this chart will generate a name by convention
+    nameOverride: web-authentication}
+  # Kubernetes Ingress configuration.  Also see `global.ingress`
+  ingress:
+    # -- If true, configures a Kubernetes Ingress resource for this deployment
+    enabled: false
+    # -- Annotations to apply to the Ingress resource
+    annotations: {}
+    # kubernetes.io/ingress.class: nginx
+
+    # -- Defines the routes for the hosts managed by this ingress.  The Service generated by this deployment will be used as the Backend.
+    hosts:
+      # -- If `global.ingress.baseDomain` is set - host field represent host part of FQDN
+      - host: backbase.local
+        # -- Kubernetes Ingress path definitions.  The Service generated by this deployment will be used as the Backend for each path specified here.
+        paths: []
+        # -- Custom paths to prepend to every host configuration.
+        # This is useful when working with annotation based services.
+        # - path: /*
+        #   backend:
+        #     serviceName: ssl-redirect
+        #     servicePort: use-annotation
+        customPaths: []
+    # -- TLS configuration for this Ingress; as defined https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+  # -- Add an emptyDir volume called the tmp-dir.
+  volumes: [
+    # directory name
+    {name: tmp-dir,
+      # empty directory
+      emptyDir: {}}]
+  # -- Mount the temp-dir to the /tmp
+  volumeMounts: [
+    # directory name
+    {name: tmp-dir,
+      # mount path
+      mountPath: /tmp, # mount path
+}]
+  # -- Allows for some small text payloads to be mounted as files that are accessible to the containers.  Typically used to deploy some additional config file.
+  # Note that this is not a recommended approach; the use of environment variables is preferred.
+  # A `ConfigMap` will be generated taking this object's keys as filename and values as the content.  The `ConfigMap` will be mounted at `customFilesPath`.
+  customFiles: {}
+  # my-first-file.yaml: |
+  #   foo: baa
+  # my-second-file.yaml: |
+  #   baa: baa2
+  #   foo: foo2
+
+  # -- Path where custom files `ConfigMap` entries will be mounted.  See `customFiles`
+  customFilesPath: /customfiles/
+  # -- Adding entries to a Pod's /etc/hosts file provides Pod-level override of hostname resolution when DNS and other options are not applicable.
+  hostAliases: []
+  # Persistent Storage using PVC
+  persistence:
+    # -- If true, will create and mount a '*-data' Volume in the deployment spec.
+    # The value of `persistence.existingClaim` determines if this is a new or pre-existing Persistent Volume Claim.
+    enabled: false
+    # -- If empty and `persistence.enabled=true`, will create a new Persistent Volume Claim for the deployment.
+    # If not empty, will use specified, pre-existing PVC name when defining the volume and not create a new Persistent Volume Claim.
+    existingClaim: ""
+    # -- Size of the Persistent Volume Claim.
+    size: 1Gi
+    # -- Path of the volume mount in the container
+    mountPath: /data
+    # -- Sub-path of the volume mount in the container
+    mountSubPath: ""
+    # -- AccessMode to set on the new Persistent Volume Claim
+    accessMode: ReadWriteOnce
+    # -- If set to "-", storageClass: "", which disables dynamic provisioning
+    # If empty or undefined - no storageClass spec is set, choosing the default provisioner.  See `global.persistence`
+    storageClass: ""
+  # -- Additional [initContainers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)
+  initContainers: []
+  #  - name: init-myservice
+  #    image: busybox:1.28
+  #    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+
+  # -- Kubernetes [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector)
+  nodeSelector: {}
+  # -- Kubernetes [Tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+  tolerations: []
+  #  - key: "key"
+  #    operator: "Equal"
+  #    value: "value"
+  #    effect: "NoSchedule"
+
+  # Kuberenetes [Affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity)
+  # affinity: {}
+  #  podAffinity:
+  #    requiredDuringSchedulingIgnoredDuringExecution:
+  #    - labelSelector:
+  #        matchExpressions:
+  #        - key: security
+  #          operator: In
+  #          values:
+  #          - S1
+  #      topologyKey: failure-domain.beta.kubernetes.io/zone
+
+  # By enabling `defaultAffinity` we provide an ability to set pod anti-affinity:
+  #  podAntiAffinity:
+  #    preferredDuringSchedulingIgnoredDuringExecution:
+  #    - weight: 100
+  #      podAffinityTerm:
+  #        labelSelector:
+  #          matchLabels:
+  #            {{- include "backbase-app.match-labels" . | nindent 8 }}
+  #        topologyKey: kubernetes.io/hostname
+  # defaultAffinity: false
+
+  # -- Kubernetes [Service Account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
+  serviceAccount:
+    # -- (bool) Specifies whether a ServiceAccount should be created
+    create:
+    # -- The name of the ServiceAccount to use.
+    # If not set and create is true, a name is generated using the fullname template.
+    # If not set and create is false (but rbac creation is enabled) "default" will be used.
+    name: ""
+    # -- The annotations to use for the service account.
+    annotations: {}
+  # [Role Based Access Control](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+  rbac:
+    # -- (bool) Specifies if RBAC resources should be created
+    create:
+    # -- Kubernetes [Role specification](https://v1-18.docs.kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole)
+    role:
+      # -- Rules to create. It follows the role specification
+      # rules:
+      #  - apiGroups:
+      #      - extensions
+      #    resources:
+      #      - podsecuritypolicies
+      #    verbs:
+      #      - use
+      rules: []
+  # -- Liquibase related configuration.  See `global.liquibase` for more details of the available options
+  liquibase: {}
+  # -- Application lifecycle related configuration.  See `global.lifecycle` for more details of the available options
+  lifecycle: {}
+  # -- set the access to the filesystem to read only.
+  securityContext: {
+    # read only root file system
+    readOnlyRootFilesystem: true}
+  # -- If enabled, will create a Kubernetes Service resource for this deployment
+  enabled: true

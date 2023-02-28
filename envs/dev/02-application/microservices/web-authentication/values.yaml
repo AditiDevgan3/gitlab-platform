@@ -1,0 +1,138 @@
+global:
+  # chartName: web-authentication
+  imagePullSecrets:
+   - name: "regcred"
+
+  # Configures the service
+  app:
+    metadata:
+      tier: identity
+      public: true
+    image:
+      registry: "asia.gcr.io/abbank-poc"
+      repository: backbase-web-app
+      tag: "453f30"
+
+  env:
+    "EUREKA_CLIENT_ENABLED": "true"
+    "SPRING_CLOUD_KUBERNETES_ENABLED": "false"
+    "SPRING_CLOUD_KUBERNETES_LOADBALANCER_MODE": "SERVICE"
+    "SIG_SECRET_KEY": "JWTSecretKeyDontUseInProduction!"
+    "USERCTX_KEY": "JWTSecretKeyDontUseInProduction!"
+    "EXTERNAL_ENC_SECRET_KEY": "JWTEncKeyDontUseInProduction666!"
+    "backbase-env-jwt": "JWTEncKeyDontUseInProduction666!"
+    "spring.cloud.gateway.discovery.locator.include-expression": "true"
+    "SPRING_APPLICATION_JSON": "{ \"spring.cloud.kubernetes.discovery.service-labels.[app.backbase.com/public]\": \"true\" }"
+
+  # Database stuff
+  database:
+    enabled: true
+    username: backbase
+    password: "CHANGEME"
+    existingSecret: ""
+    existingSecretKey: "backbase-env-mysql"
+    type: mysql
+    host: 10.121.192.5
+    port: 3306
+    parameters:
+      mysql: "backbase"
+
+  # JMS/ActiveMQ stuff
+  activemq:
+    enabled: true
+    username: "admin"
+    password: "admin"
+    existingSecretKey: "ACTIVEMQ_PASSWORD"
+    host: "activemq-activemq-classic"
+    urlTemplate: ""
+    port: 61616
+    checkEnabled: false
+    checkType: netcat
+    checkInitContainerImage: busybox
+    checkInitContainerMemory: 100Mi
+    checkInitContainerCpu: 100m
+
+  activemqEnvVarsMap:
+    URL: "SPRING_ACTIVEMQ_BROKER_URL"
+    USERNAME: "SPRING_ACTIVEMQ_USER"
+    PASSWORD: "SPRING_ACTIVEMQ_PASSWORD"
+
+  # Netflix Eureka service discovery registry configuration
+  registry:
+    enabled: true
+    preferIpAddress: true
+    envVarNamePreferIpAddress: EUREKA_INSTANCE_PREFERIPADDRESS
+    envVarNameDefaultZone: eureka.client.serviceUrl.defaultZone
+    protocol: http
+    host: registry-backbase-application
+    port: 8080
+    path: /eureka/
+    checkEnabled: false
+    checkType: curl
+    checkInitContainerImage: byrnedo/alpine-curl
+    checkInitContainerMemory: 200Mi
+    checkInitContainerCpu: 100m
+
+  # -- Kubernetes service
+  service:
+    enabled: true
+    type: NodePort
+    port: 8080
+    portName: http
+    targetPort: http
+  
+  # ingress:
+  #   baseDomain: ""
+  #   annotations: 
+  #     kubernetes.io/ingress.class: gce
+
+  # JWT variables for application pod
+  jwt:
+    enabled: false
+    existingSecret: "backbase-env-jwt"
+    SIG_SECRET_KEY_fromSecret: true
+    USERCTX_KEY_fromSecret: true
+
+# Kubernetes Service
+webauthentication:
+  enabled: true
+  app:
+    name: webauthentication
+    resources:
+      memory:
+        ram: 768
+  volumes:
+    - name: tmp-dir
+      emptyDir: { }
+  volumeMounts:
+    - name: tmp-dir
+      mountPath: /tmp 
+  securityContext:
+    readOnlyRootFilesystem: true
+
+  # # Activemq :JMS/ActiveMQ Settings
+  # activemq:
+  #   enabled: true
+
+  # # Kubernetes service
+  # service:
+  #   nameOverride: web-authentication
+    
+ingress:
+  enabled: true
+  annotations: 
+    kubernetes.io/ingress.class: gce
+  hosts:
+  - host: dev.abbank.com
+    customPaths: 
+        - backend:
+            service:
+              name: web-auth-backbase-application
+              port: 
+                number: 8080
+          path: /
+          pathType: Prefix
+
+  # # Database
+  # database:
+  #   sid: web_authentication

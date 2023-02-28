@@ -1,0 +1,52 @@
+stages:
+  - infra
+  - merge
+
+# testing:
+#   stage: testing
+#   before_script:
+#     # Login to Google Container Registry
+#     - base64 -d $GCP_SA_KEY | docker login -u _json_key --password-stdin https://asia.gcr.io
+#     # Login to Gitlab container Registry
+#     # - echo $CI_JOB_TOKEN | docker login -u gitlab-ci-token $CI_REGISTRY --password-stdin
+#   script:
+#     - docker build --cache-from -t asia.gcr.io/abbank-poc/gcr-testing:v1 .
+#     - docker push asia.gcr.io/abbank-poc/gcr-testing:v1
+
+# key-testing:
+#   stage: key-testing
+#   script:
+#     - echo $GCLOUD_AUTH | base64 --decode > $CI_PROJECT_DIR/gcloud-service-key.json
+#     - gcloud auth activate-service-account --key-file $CI_PROJECT_DIR/gcloud-service-key.json
+
+dev-infra-tools:
+  stage: infra
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"
+      changes:
+        - infra_pipeline_tool-master/infra-docker-image/*
+  trigger:
+    include: "infra_pipeline_tool-master/infra-docker-image/.gitlab-ci.yml"
+  # script:
+  #   - echo $GCLOUD_AUTH | base64 --decode > $CI_PROJECT_DIR/gcloud-service-key.json
+  #   - gcloud auth activate-service-account --key-file $CI_PROJECT_DIR/gcloud-service-key.json
+
+merge_request_dev:
+  stage: merge
+  image: aditidevgan/infra:v2
+  # image: asia.gcr.io/abbank-poc/infra-pipeline-tool:v3
+  tags:
+    - dev
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "push"
+      # changes:
+      #   - envs/dev/02-application/microservices/*
+  script:
+    - echo $GCLOUD_SERVICE_KEY > gcloud-service-key.json
+    - gcloud auth activate-service-account --key-file=gcloud-service-key.json
+    - gcloud container clusters get-credentials abb-cluster --zone asia-south2 --project abbank-poc
+    - pwd
+    - helm template --debug -f envs/dev/02-application/microservices/web-authentication/values.yaml web-auth _helm_charts/xebia/helm-xebia-backbase-service-chart-0.1.0/charts/backbase-app
+    - cd envs/dev/02-application/microservices/web-authentication
+    - cat values.yaml
+    - helm upgrade web-auth ../../../../../_helm_charts/xebia/helm-xebia-backbase-service-chart-0.1.0/charts/backbase-app -n backbase -f values.yaml --install --create-namespace
